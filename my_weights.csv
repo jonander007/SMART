@@ -1,0 +1,25 @@
+,Level1,Level2,Weight
+0,Combustible y ciclo nuclear,Capacidad de reciclado de combustible,0.00801
+1,Combustible y ciclo nuclear,Enriquecimiento,0.01843
+2,Combustible y ciclo nuclear,Estrategia de recarga y ciclo del combustible,0.03992
+3,Combustible y ciclo nuclear,Gestión de residuos,0.02129
+4,Combustible y ciclo nuclear,Tipo de combustible,0.03477
+5,Costes,Consideraciones comerciales,0.03619
+6,Costes,LCOE,0.01206
+7,Despliegue,Complejidad número de módulos,0.02355
+8,Despliegue,Flexibilidad de configuración de planta,0.07065
+9,Emplazamiento e integración física,Requisitos de agua,0.02642
+10,Emplazamiento e integración física,Requisitos de superficie,0.01008
+11,Emplazamiento e integración física,Restricciones de planificación de planta,0.02308
+12,Factores estratégicos y de suministro,Dependencia tecnológica del proveedor,0.01272
+13,Factores estratégicos y de suministro,Riesgo geopolítico del país proveedor,0.05088
+14,Flexibilidad operativa,Capacidad de seguimiento de carga,0.0382
+15,Madurez tecnológica y regulatoria,Estado de licenciamiento,0.17401
+16,Madurez tecnológica y regulatoria,Nivel de desarrollo del diseño,0.0435
+17,Salvaguardias y protección,Ciberseguridad,0.04211
+18,Salvaguardias y protección,Protección física y control de acceso,0.04211
+19,Salvaguardias y protección,Salvaguardias nucleares y no proliferación,0.04211
+20,Seguridad y protección radiológica,Consecuencias radiológicas en accidentes,0.10338
+21,Seguridad y protección radiológica,Enfoque de seguridad,0.04722
+22,Seguridad y protección radiológica,Exposición radiológica en operación,0.02419
+23,Seguridad y protección radiológica,Gestión de accidentes severos,0.05513

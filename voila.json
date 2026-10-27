@@ -1,0 +1,41 @@
+{
+	"VoilaConfiguration": {
+		"file_allowlist": [".*\\.(smt|smart|csv|html|png|jpg|zip)"],
+		"show_tracebacks": true
+	},
+	"ZMQChannelsWebsocketConnection": {
+		"iopub_msg_rate_limit": 100000,
+		"iopub_data_rate_limit": 100000000,
+		"rate_limit_window": 10
+	},
+	"VoilaExecutor": {
+		"iopub_timeout": 300
+	},
+	"ExecutePreprocessor": {
+		"iopub_timeout": 300,
+		"timeout": 300
+	},
+	"NotebookClient": {
+		"iopub_timeout": 300
+	},
+	"Voila": {
+		"open_browser": false
+	},
+	"Application": {
+		"logging_config": {
+			"handlers": {
+				"file": {
+					"class": "logging.FileHandler",
+					"level": "DEBUG",
+					"filename": "smart.log"
+				}
+			},
+			"loggers": {
+				"<application-name>": {
+					"level": "DEBUG",
+					"handlers": ["console", "file"]
+				}
+			}
+		}
+	}
+}

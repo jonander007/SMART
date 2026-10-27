@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Export Questionnaire</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:Syne,Arial,sans-serif;background:#f0f4ff;
+     display:flex;align-items:center;justify-content:center;
+     min-height:100vh;padding:20px;}
+.card{background:#fff;border-radius:14px;padding:32px 36px;max-width:460px;
+      width:100%;box-shadow:0 8px 32px rgba(0,0,0,.12);}
+.eyebrow{font-size:11px;font-weight:700;letter-spacing:.1em;color:#6b7280;
+         text-transform:uppercase;margin-bottom:10px;}
+h2{font-size:19px;font-weight:800;color:#111827;margin-bottom:6px;}
+.desc{font-size:13px;color:#6b7280;line-height:1.6;margin-bottom:24px;}
+.options{display:flex;flex-direction:column;gap:10px;margin-bottom:24px;}
+.opt{text-align:left;padding:14px 16px;border:2px solid #e5e7eb;
+     border-radius:10px;background:#fff;cursor:pointer;width:100%;
+     transition:border-color .15s,background .15s;}
+.opt:hover{border-color:var(--c);background:var(--bg);}
+.opt-title{font-size:14px;font-weight:700;color:var(--c);margin-bottom:3px;}
+.opt-desc{font-size:12px;color:#6b7280;line-height:1.5;}
+.cancel-row{text-align:right;}
+.cancel{font-size:12px;color:#9ca3af;background:none;border:none;
+        cursor:pointer;padding:4px 8px;}
+.cancel:hover{color:#6b7280;}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="eyebrow">Export Questionnaire</div>
+  <h2>Rating Scales Comparison</h2>
+  <p class="desc">Choose how this section should appear in the exported questionnaire:</p>
+  <div class="options">
+    <button class="opt" style="--c:#1d4ed8;--bg:#eff6ff" onclick="choose('editable')">
+      <div class="opt-title">✏️ &nbsp;Editable</div>
+      <div class="opt-desc">The expert can adjust the pairwise comparisons between scale options.</div>
+    </button>
+    <button class="opt" style="--c:#b45309;--bg:#fffbeb" onclick="choose('readonly')">
+      <div class="opt-title">🔒 &nbsp;Read-only</div>
+      <div class="opt-desc">The analyst's values are shown for reference but cannot be changed.</div>
+    </button>
+    <button class="opt" style="--c:#374151;--bg:#f9fafb" onclick="choose('hidden')">
+      <div class="opt-title">🚫 &nbsp;Omit section</div>
+      <div class="opt-desc">The Rating Scales Comparison tab is not included in the questionnaire.</div>
+    </button>
+  </div>
+  <div class="cancel-row">
+    <button class="cancel" onclick="choose('cancel')">Cancel</button>
+  </div>
+</div>
+<script>
+function choose(val) {
+  window.pywebview.api.chosen(val);
+}
+</script>
+</body>
+</html>

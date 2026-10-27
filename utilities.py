@@ -44,7 +44,10 @@ REPORT_CHART_WIDTH = 1150
 
 # RESULTS TAB
 ## Bar Plot
-def make_bar_fig(df, colors_df, hatch_color='black'):
+def make_bar_fig(df, colors_df, hatch_color='black', groups=None):
+    # groups: optional {subcriterion: criterion}. When given (Results tab), the
+    # legend goes on the right, one titled block per criterion, which suits a
+    # full-width screen. Without it (the report) the legend stays underneath.
     traces =[]
     colors = dict(colors_df[['Criteria', 'Color Plotly']].values)
     hatches = dict(colors_df[['Criteria', 'Hatches']].values)
@@ -66,6 +69,9 @@ def make_bar_fig(df, colors_df, hatch_color='black'):
                 marker_pattern_shape=pattern_shape,
                 marker_pattern_size=pattern_size
                 )
+        if groups:
+            group = groups.get(subcriteria, subcriteria)
+            trace.update(legendgroup=group, legendgrouptitle_text=group)
         traces.append(trace)
         sizes.append(pattern_size)
     fig = go.Figure(data=traces)
@@ -180,6 +186,28 @@ def make_bar_fig(df, colors_df, hatch_color='black'):
             ),
         font=text_fontdict
         )
+    if groups:
+        # Side legend: one row per subcriterion plus one title per criterion.
+        # The plot grows with it so the whole legend fits without scrolling.
+        legend_rows = n_series + len(set(groups.get(c, c) for c in subcriteria_columns))
+        side_plot_px = max(plot_px, legend_rows * 24)
+        fig.update_layout(
+            height=top_px + side_plot_px + xaxis_px,
+            legend=dict(
+                orientation='v',
+                yanchor='top',
+                y=1,
+                xanchor='left',
+                x=1.02,
+                traceorder='grouped',
+                # Clicking an entry hides that subcriterion only, not its group.
+                groupclick='toggleitem',
+                tracegroupgap=6,
+                itemwidth=30,
+                grouptitlefont=dict(legend_font, size=13),
+                ),
+            margin=dict(l=70, r=20, t=top_px, b=xaxis_px, pad=4),
+            )
     # selector: the totals annotation is a Scatter trace and has no
     # marker.pattern, so restrict this to the bars.
     fig.update_traces(
@@ -191,7 +219,7 @@ def make_bar_fig(df, colors_df, hatch_color='black'):
     return fig
 
 ## Pie Plot
-def make_pie_fig(df, df_colors=None, title=None, center_text=None, is_scores=False, hatch_color='black'):
+def make_pie_fig(df, df_colors=None, title=None, center_text=None, is_scores=False, hatch_color='black', show_legend=True):
     # Get data to plot depending if we plot alternative scores or criteria weights
     if is_scores:
         alternative_df = df[df['Alternatives']==title].transpose()
@@ -288,7 +316,12 @@ def make_pie_fig(df, df_colors=None, title=None, center_text=None, is_scores=Fal
                 x=0.5,
                 xanchor='center'),
             )
-    
+    if not show_legend:
+        # Small-multiples grid: the colours are explained once by the ranking
+        # chart's legend, and each slice names itself on hover.
+        fig.update_layout(showlegend=False, height=420,
+                          margin=dict(t=55, b=30, l=30, r=30))
+
     return fig
 
 def assign_colors_and_hatches(tree_dict, hatches = ['/', '\\', '|', '+', 'x', '.', '-'], alpha0=0.80, delta_alpha=0.25, min_alpha=0.3, color_scale='accent'):
@@ -401,7 +434,10 @@ def make_double_pie_fig_plotly(data_df, df_colors, anotate=False, pct_limit=2.0,
     return fig
     
 
-def make_double_pie_fig(data_df, colors_df, anotate=False, pct_limit=2.0, hatch_color='black'):
+def make_double_pie_fig(data_df, colors_df, anotate=False, pct_limit=2.0, hatch_color='black', show_legend=True, width_px=None):
+    # show_legend=False draws the rings only: the Results tab shows its own
+    # tickable legend beside the chart, so a second copy inside the image just
+    # shrinks the donut. width_px sets the dpi so the PNG renders at that width.
     ncols = data_df.shape[1]
     font_size = 10
     size = 0.5
@@ -412,7 +448,12 @@ def make_double_pie_fig(data_df, colors_df, anotate=False, pct_limit=2.0, hatch_
     #  plt.rcParams["font.family"] = "DejaVu Sans Mono"
     #  plt.rcParams["font.size"] = font_size
     fig, ax = plt.subplots(figsize=(15, 15))
-    fig.subplots_adjust(0.3,0,1,1)
+    if width_px:
+        fig.set_dpi(width_px / 15)
+    if show_legend:
+        fig.subplots_adjust(0.3,0,1,1)
+    else:
+        fig.subplots_adjust(0,0,1,1)
     df_criteria = []
     wedges_list = []
     for level in range(1, ncols):
@@ -440,6 +481,8 @@ def make_double_pie_fig(data_df, colors_df, anotate=False, pct_limit=2.0, hatch_
             autotexts[row].set_visible(False)
     for (wedges, texts, autotexts) in wedges_list:
         plt.setp(autotexts, size=font_size, weight="bold", color="black")
+    if not show_legend:
+        return fig
     # --- Custom grouped legend ---
     level_cols = [col for col in data_df.columns if col.startswith('Level')]
     legend_handles = []

@@ -35,13 +35,29 @@ loading_bar = get_loading_bar()
 
 # The criteria-weights chart is matplotlib: Jupyter renders it as an <img> at the
 # figure's natural pixel size (figsize x dpi), and CSS only ever shrinks it to
-# fit. Forcing width:100% makes it fill its container instead, so it ends up
-# exactly plot_width wide — the same as the plotly charts below it.
+# fit. Forcing width:100% makes it fill its column instead.
 _CRIT_CSS = """
 <style>
 .crit-plot img { width: 100% !important; height: auto !important; }
 </style>
 """
+
+# Pixel width the criteria-weights PNG is rendered at, and the widest its
+# column may grow. The column itself is fluid, so the page fills the screen.
+_CRIT_PX = plot_width * 3 // 4
+
+
+def _fig_output(fig):
+    """Show a plotly figure so that it fills the width of its container.
+
+    go.FigureWidget never re-measures its container under Voila and stays at
+    plotly's 700px default, so these read-only charts are rendered with the
+    plotly mimetype renderer instead, which tracks the container width.
+    """
+    out = widgets.Output(layout=widgets.Layout(width='100%'))
+    with out:
+        fig.show(renderer='plotly_mimetype', config={'responsive': True})
+    return out
 
 # matplotlib hatch -> equivalent CSS, so the clickable legend swatches look like
 # the wedges they refer to.
@@ -89,13 +105,11 @@ class AhpCalculator():
                             font_weight='bold',
                         )
                     )
-        # The criteria-weights chart is matplotlib: it renders as an <img> that
-        # the browser stretches to the container, so it used to span the whole
-        # tab while the plotly charts below sat at a fixed width. Cap it to the
-        # same width so every chart in this tab lines up. Both come from
-        # constants.plot_width — change that one number to resize them all.
+        # The tab fills the screen: the criteria-weights chart and its tickable
+        # legend sit side by side and wrap onto two lines on narrow windows;
+        # the ranking chart and the alternatives grid below span the full width.
         self.critplotsOut = widgets.Output(
-            layout=widgets.Layout(width=f'{plot_width // 2}px')
+            layout=widgets.Layout(flex='1 1 480px', max_width=f'{_CRIT_PX}px')
         )
         self.critplotsOut.add_class('crit-plot')
         # What-if filter: untick a criterion/subcriterion to drop it from the
@@ -109,14 +123,15 @@ class AhpCalculator():
         # The legend is no longer drawn inside the matplotlib image: it is built
         # from widgets so each entry can be ticked to show/hide its wedge.
         self.critLegendBox = widgets.VBox(
-            [], layout=widgets.Layout(width=f'{plot_width // 2}px')
+            [], layout=widgets.Layout(flex='1 1 420px', margin='0 0 0 16px')
         )
         self.critRow = widgets.HBox(
             [self.critplotsOut, self.critLegendBox],
-            layout=widgets.Layout(width=f'{plot_width}px', align_items='center'),
+            layout=widgets.Layout(width='100%', flex_flow='row wrap',
+                                  align_items='flex-start'),
         )
         self.plotsOut = widgets.Output(
-            layout=widgets.Layout(width=f'{plot_width}px')
+            layout=widgets.Layout(width='100%')
         )
         self.downloadOut = widgets.Output()
         self.notif = NotificationBar()
@@ -135,7 +150,7 @@ class AhpCalculator():
                 self.plotsOut,
                 self.exportButton,
                 self.downloadOut
-            ])
+            ], layout=widgets.Layout(width='100%'))
         self.exportButton.on_click(self.exportFigures)
 
 
@@ -181,14 +196,18 @@ class AhpCalculator():
             self._weights_df     = df
             self._criteria_colors = criteria_colors
             self._build_criteria_filters(df)
-            # Double pie chart with criteria/subcriteria weights
-            fig = make_double_pie_fig(df, criteria_colors)
+            self._refresh_legend(df)
+            # Double pie chart with criteria/subcriteria weights. Its legend is
+            # the tickable one beside it, so the image holds only the rings.
+            fig = make_double_pie_fig(df, criteria_colors, show_legend=False,
+                                      width_px=_CRIT_PX)
             self.critplot = fig
 
-            # Bar Plot with all alternatives
+            # Bar Plot with all alternatives, legend grouped by criterion
             alternatives_df = self.get_weighted_scores('global_weights')
-            fig = make_bar_fig(alternatives_df, criteria_colors)
-            self.plots.append(go.FigureWidget(fig))
+            fig = make_bar_fig(alternatives_df, criteria_colors,
+                               groups=self._leaf_groups(df))
+            self.plots.append(fig)
             self.labels.append(
                     widgets.Label(
                         value = 'Global Ranking',
@@ -200,8 +219,9 @@ class AhpCalculator():
 
             # Donut plots
             for alternative in self.ranking.keys():
-                fig = make_pie_fig(alternatives_df, criteria_colors, title=alternative, is_scores=True)
-                self.plots.append(go.FigureWidget(fig))
+                fig = make_pie_fig(alternatives_df, criteria_colors, title=alternative,
+                                   is_scores=True, show_legend=False)
+                self.plots.append(fig)
                 self.labels.append(
                         widgets.Label(
                             value = alternative,
@@ -213,11 +233,27 @@ class AhpCalculator():
 
             with self.critplotsOut:
                 clear_output()
+                display(HTML(_CRIT_CSS))
                 display(HTML(self._critplot_html(self.critplot)))
+            # Ranking full width, then one donut per alternative in a grid that
+            # fits as many columns as the screen allows (each donut is titled
+            # with its alternative, so the separate labels are not repeated).
+            donuts = widgets.GridBox(
+                [_fig_output(f) for f in self.plots[1:]],
+                layout=widgets.Layout(
+                    width='100%',
+                    grid_template_columns='repeat(auto-fill, minmax(420px, 1fr))',
+                    grid_gap='8px',
+                ),
+            )
             with self.plotsOut:
                 clear_output()
                 display(widgets.VBox(
-                    [val for pair in zip(self.labels,self.plots) for val in pair]
+                    [self.labels[0], _fig_output(self.plots[0]),
+                     widgets.Label(value='Scores by Alternative',
+                                   style=dict(font_weight='bold')),
+                     donuts],
+                    layout=widgets.Layout(width='100%'),
                     ))
 
     # ── What-if filter for the criteria-weights chart ─────────────────────────
@@ -233,12 +269,16 @@ class AhpCalculator():
         self._crit_checks = {}
         self._crit_parent = {}
         self._crit_labels = {}
-        rows = [widgets.HTML(
+        header = widgets.HTML(
             '<div style="font-weight:700;text-align:center;padding:6px 0;'
             'border-bottom:1px solid #ccc;margin-bottom:6px;">'
             'Criteria &amp; Subcriteria</div>'
-        )]
+        )
+        # One block per top-level criterion; the blocks flow into as many
+        # columns as fit, so the list stays about as tall as the chart.
+        blocks = OrderedDict()
         for _, r in df.iterrows():
+            rows = blocks.setdefault(r[level_cols[0]], [])
             parent = None
             for i, col in enumerate(level_cols):
                 name = r[col]
@@ -276,7 +316,23 @@ class AhpCalculator():
                         ),
                     ))
                 parent = name
-        self.critLegendBox.children = rows
+        grid = widgets.GridBox(
+            [widgets.VBox(rows, layout=widgets.Layout(margin='0 0 10px 0'))
+             for rows in blocks.values()],
+            layout=widgets.Layout(
+                grid_template_columns='repeat(auto-fill, minmax(380px, 1fr))',
+                grid_gap='0 16px',
+                align_items='flex-start',
+            ),
+        )
+        self.critLegendBox.children = [header, grid]
+
+    @staticmethod
+    def _leaf_groups(df):
+        """{leaf criterion: its top-level criterion}, for the ranking legend."""
+        level_cols = [c for c in df.columns if c.startswith('Level')]
+        return {r.dropna().iloc[-1]: r[level_cols[0]]
+                for _, r in df[level_cols].iterrows()}
 
     def _refresh_legend(self, kept):
         """Update each legend row with the weight it has after redistribution."""
@@ -385,13 +441,11 @@ class AhpCalculator():
                 return
             if self.critplot is not None:
                 plt.close(self.critplot)      # free the previous figure
-            # show_legend=True: draw the 2-column criteria list INSIDE the image
-            # so it is part of the zoomable view and the downloaded PNG. The
-            # tickable checkbox legend still lives beside the chart as the filter
-            # control.
+            # Rings only: the tickable legend beside the chart already lists the
+            # criteria. 'Export Figures' adds the legend back into the PNG.
             self.critplot = make_double_pie_fig(
-                kept, self._criteria_colors, show_legend=True,
-                width_px=plot_width // 2,
+                kept, self._criteria_colors, show_legend=False,
+                width_px=_CRIT_PX,
             )
             display(HTML(self._critplot_html(self.critplot)))
 
@@ -451,7 +505,15 @@ class AhpCalculator():
         file_dict = {}
         im_file = 'Criteria_Weights.png'
         im_file = os.path.join(tmp_dir, im_file)
-        self.critplot.savefig(im_file, bbox_inches='tight')
+        # The on-screen chart has no legend (it sits beside it as widgets), so
+        # the exported PNG is redrawn with the legend inside the image.
+        kept = self._apply_filter(self._weights_df) if self._weights_df is not None else None
+        if kept is not None and not kept.empty:
+            fig = make_double_pie_fig(kept, self._criteria_colors)
+            fig.savefig(im_file, bbox_inches='tight')
+            plt.close(fig)
+        else:
+            self.critplot.savefig(im_file, bbox_inches='tight')
         file_dict['Criteria_Weights'] = im_file
         for i, plot in enumerate(self.plots):
             im_file = '{}_Scores.{}'.format(self.labels[i].value, im_format)
@@ -519,7 +581,7 @@ class AhpCalculator():
             border-radius:4px; background:#fff; color:#333; cursor:pointer; text-decoration:none; }}
 .crit-tb button:hover, .crit-tb a:hover {{ background:#eef2ff; }}
 .crit-tb .sp {{ flex:1; }}
-.crit-vp {{ overflow:auto; max-height:720px; cursor:grab; }}
+.crit-vp {{ overflow:auto; max-height:{_CRIT_PX + 40}px; cursor:grab; }}
 .crit-vp img {{ max-width:100%; transform-origin:top left; display:block; }}
 </style>
 <div class="critwrap">

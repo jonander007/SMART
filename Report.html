@@ -5,28 +5,6 @@
 {% endblock %}
 
 {% block content %}
-{# plotly.js embedded once for the whole report. Every figure is written with
-   include_plotlyjs=False, so this script must stay before the first chart. #}
-<script type="text/javascript">{{ plotlyjs }}</script>
-{% if incomplete_nodes %}
-<div style="border:1px solid #d97706; border-left:6px solid #d97706; background:#fffbeb;
-            border-radius:8px; padding:14px 18px; margin:0 0 22px 0; font-size:0.9em;">
-  <p style="margin:0 0 8px 0; font-weight:700; color:#92400e;">
-    &#9888;&#65039; Incomplete case &mdash; results are provisional
-  </p>
-  <p style="margin:0 0 8px 0; color:#78350f;">
-    No data was found for the criteria listed below. To let the report be
-    generated anyway, <strong>equal weights</strong> were assumed for them.
-    The rankings and charts in this report are therefore only indicative until
-    these entries are filled in.
-  </p>
-  <ul style="margin:0; color:#78350f;">
-  {% for node, kind in incomplete_nodes %}
-    <li><strong>{{ node }}</strong> &mdash; missing {{ kind }} data</li>
-  {% endfor %}
-  </ul>
-</div>
-{% endif %}
 <!-- <h1>Report for case: {{ title }}</h1> -->
 <div class="page-break">
 <h2 id="general_information" class="section-title">General Information:</h2>
@@ -127,63 +105,6 @@
     {% endfor %}
     </ol>
 </div>
-{% if traceability %}
-<div class="page-break">
-  <h2 id="traceability">Traceability &amp; Methodology Log</h2>
-  <table>
-    <thead>
-      <tr><th>Item</th><th>Detail</th></tr>
-    </thead>
-    <tbody>
-      <tr><td><strong>Report generated</strong></td><td>{{ traceability.report_generated }}</td></tr>
-      <tr><td><strong>SMART version</strong></td><td>{{ traceability.smart_version }}</td></tr>
-      {% if traceability.ahp_method %}
-      <tr><td><strong>AHP method</strong></td><td>{{ traceability.ahp_method }}</td></tr>
-      {% endif %}
-      {% if traceability.aggregation %}
-      <tr><td><strong>Expert aggregation</strong></td>
-          <td>Method: {{ traceability.aggregation.method }} &nbsp;|&nbsp;
-              Threshold: {{ traceability.aggregation.threshold }}σ &nbsp;|&nbsp;
-              Experts: {{ traceability.aggregation.n_experts }}</td></tr>
-      {% endif %}
-      {% if traceability.outliers_excluded and traceability.outliers_excluded|length > 0 %}
-      <tr>
-        <td><strong>Outliers excluded</strong></td>
-        <td>
-          <ul style="margin:0;padding-left:1.2rem">
-          {% for o in traceability.outliers_excluded %}
-            <li><em>{{ o.expert }}</em> — {{ o.criterion }} (Z = {{ o.z }})</li>
-          {% endfor %}
-          </ul>
-        </td>
-      </tr>
-      {% endif %}
-      {% if traceability.sensitivity_runs and traceability.sensitivity_runs|length > 0 %}
-      <tr>
-        <td><strong>Sensitivity analyses</strong></td>
-        <td>
-          <ul style="margin:0;padding-left:1.2rem">
-          {% for s in traceability.sensitivity_runs %}
-            <li><strong>{{ s.type }}</strong>:
-              {% if s.type == 'Monte Carlo' %}
-                {{ s.n_iterations }} iterations, σ = {{ s.sigma }}, perturbed: {{ s.perturbed }}
-              {% elif s.type == 'Parametric' %}
-                {{ s.n_combinations }} combinations —
-                {% for p in s.parameters %}
-                  <em>{{ p.criterion }}</em> [{{ p.min }}–{{ p.max }}, {{ p.steps }} steps]
-                  {% if not loop.last %}, {% endif %}
-                {% endfor %}
-              {% endif %}
-            </li>
-          {% endfor %}
-          </ul>
-        </td>
-      </tr>
-      {% endif %}
-    </tbody>
-  </table>
-</div>
-{% endif %}
 {% endblock %}
 {% block footer %}
         <p>SMART {{ version }}</p>

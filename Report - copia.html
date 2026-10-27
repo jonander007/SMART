@@ -1,0 +1,110 @@
+{% extends 'base.html' %}
+
+{% block title %}
+<h1>{{ title }}</h1>
+{% endblock %}
+
+{% block content %}
+<!-- <h1>Report for case: {{ title }}</h1> -->
+<div class="page-break">
+<h2 id="general_information" class="section-title">General Information:</h2>
+  <ul>
+      <li>Date: {{ date }}</li>
+      <li>Author: {{ author }}</li>
+      <li>AHP Type: {{ ahptype }}</li>
+      <li>Description: {{ description }}</li>
+  </ul>
+</div>
+<div class="page-break">
+  <h2 id="alternatives">Alternatives:</h2>
+  <ol>
+      {% for alternative in alternatives -%}
+      <li>{{ alternative }}</li>
+      {% endfor %}
+  </ol>
+</div>
+<div class="page-break">
+  <h2 id="hyerarchy">Criteria and Subcriteria Hyerarchy:</h2>
+  {% if graphviz_ok == True %}
+	<img src= "data:image/png;base64,{{ treeplot }}" alt="Embedded Image"/>
+  {% elif graphviz_ok == False %}
+    <p>{{ treeplot | safe }}<p>
+  {% endif %}
+  <h2 id="descriptions">Criteria and Subcriteria Descriptions:</h2>
+  <ul>
+    {% for key, value in criteria_descriptions.items() %}
+    <li><strong>{{ key }}</strong>: {{ value }}</li>
+    {% endfor %}
+  </ul>
+</div>
+<div class="page-break">
+  <h2 id="criteria_comparisons">Criteria Comparisons:</h2>
+  <ol>
+    {% for key, (table, im) in criteria_compare_dict.items() %}
+    <li>{{ key }}</li>
+		<div class="pair">
+			<div class="table-container">	
+				{{ table | read_file | safe }}
+			</div>
+			<div class="image-container">
+				{{ im | read_file | safe }}
+			</div>
+		</div>
+	  <p>Consitency Ratio:{{ criteria_consistency_dict[key] }}</p>
+    {% endfor %}
+  </ol>
+</div>
+<div class="page-break">
+  <h2 id="alternative_ratings">Alternative Ratings:</h2>
+  {% if ahptype == 'Pairwise Comparison' %}
+    <ol>
+    {% for key, (table, im) in alternative_compare_dict.items() %}
+    <li>{{ key }}</li>
+		<div class="pair">
+			<div class="table-container">	
+				<p>{{ table | read_file | safe }}</p>
+			</div>
+			<div class="image-container">
+				<p>{{ im | read_file | safe }}</p>
+			</div>
+		</div>
+	  <p>Consitency Ratio:{{ alternative_consistency_dict[key] }}</p>
+    {% endfor %}
+    </ol>
+  {% elif ahptype == 'Use Rating Scale' %}
+    <h3> Rating Scales </h3>
+    <ol>
+    {% for key, (table, im) in rating_compare_dict.items() %}
+    <li>{{ key }}</li>
+        <div class="pair">
+			<div class="table-container">	
+				<p>{{ table | read_file | safe }}</p>
+			</div>
+			<div class="image-container">
+				<p>{{ im | read_file | safe }}</p>
+			</div>
+		</div>
+	  <p>Consitency Ratio:{{ rating_consistency_dict[key] }}</p>
+    {% endfor %}
+    </ol>
+    <h3> Rating Table </h3>
+      {{ rating_table | read_file | safe }}
+  {% endif %}
+</div>
+<div class="page-break">
+  <h2 id="results">Results:</h2>
+    <ol>
+		<img src="data:image/png;base64,{{ criteria_weights }}" alt="Embedded Image"/>
+	</ol>
+    <ol>
+    {% for key, value in results_dict.items() %}
+    <li>{{ key }}</li>
+      {{ value | read_file | safe }}
+    {% endfor %}
+    </ol>
+</div>
+{% endblock %}
+{% block footer %}
+        <p>SMART {{ version }}</p>
+        <p>&copy; 2024 IDOM Nuclear Services</p>
+{% endblock %}
